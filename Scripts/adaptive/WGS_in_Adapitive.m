@@ -6,9 +6,12 @@ row = 10;
 column = 10;
 row_spacing = 15;
 column_spacing = 10;
-iteration_num = 20;
+
+phase_fixed_point = 15; % phase fixed wgs algorithm
+iteration_num = 30;
+
 Resolution = [1920 1200];
-adaptive_num = 50;
+adaptive_num = 5;
 Camera_Exposure = 300;%112.181;
 Camera_Gain = 1;
 
@@ -65,6 +68,9 @@ for adaptive = 1:adaptive_num
         B = abs(input_intensity) .* exp(1i*angle(A));
         B = B / max(max(abs(B)));
         C = fftshift(fft2(fftshift(B)));
+        if k < phase_fixed_point
+            phase_fixed = exp(1i*angle(C));
+        end
         amplitute_retrival = abs(C);
         aver_intensity_retrival = 0;
     
@@ -81,7 +87,7 @@ for adaptive = 1:adaptive_num
             end
         end
     
-        D = abs(Target) .* exp(1i*angle(C));
+        D = abs(Target) .* phase_fixed;
         
         for i = 1:column % weighted part
             for j = 1:row
