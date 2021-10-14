@@ -2,49 +2,29 @@ clear all; close all;
 tic;
 %% Parameters
 
-row = 5;
+row = 10;
 column = 10;
 row_spacing = 15;
 column_spacing = 10;
-iteration_num = 30;
+iteration_num = 20;
 Resolution = [1920 1200];
-adaptive_num = 5;
-Camera_Exposure = 112.181;
+adaptive_num = 50;
+Camera_Exposure = 300;%112.181;
 Camera_Gain = 1;
 
 
 %% Initialize the camera
-    % create a video obj to get data
-    vidobj = videoinput('gentl', 1, 'Mono8'); 
-    vidobj.TriggerRepeat=inf;
-    vidobj.FramesPerTrigger=1;
-    % set trigger mode to manual, then we can start and stop the
-    % camera by our self
-    triggerconfig(vidobj, 'manual');
+% create a video obj to get data
+vidobj = videoinput('gentl', 1, 'Mono8'); 
+vidobj.TriggerRepeat=inf;
+vidobj.FramesPerTrigger=1;
+% set trigger mode to manual, then we can start and stop the
+% camera by our self
+triggerconfig(vidobj, 'manual');
+% Get the video source
+src = getselectedsource(vidobj); 
+start(vidobj);
 
-    % Get the video source
-    src = getselectedsource(vidobj); 
-
-    % % set the Binning of the camera
-    % src.BinningHorizontal = 2;
-    % src.BinningVertical = 2;
-
-    % start video aquisition
-    start(vidobj);
-    
-    % get a pic
-    trigger(vidobj);
-    
-    %snapshot = getsnapshot(vidobj); 
-    snapshot=getdata(vidobj);
-    
-    % adjust to the size of our pic
-%     im = image(zeros(size(snapshot),'uint8'));
-    
-    % set Preview as image mode
-    axis('image');
-
-    
 %% Generate the SLM plane intensity: our resolution is Resolution(1)*Resolution(2)
 	x = linspace(-10,10,Resolution(1));
 	y = linspace(-10,10,Resolution(2));
@@ -70,78 +50,57 @@ Camera_Gain = 1;
         end
     end
 
-    weight = ones(column,row);
-
     % Prepare the target picture
 	Target=double(Blank_pic);
 	A = fftshift(ifft2(fftshift(Target)));
 
-
-    
-
 %% LOOP starts
-record = [];
+% record = [];
+stdeviation = [];
 
 for adaptive = 1:adaptive_num
 %% Start Weighted Gershberg-Saxton algorithm iteration
-	error = [];
+	weight = ones(column,row);
     for k=1:iteration_num
         B = abs(input_intensity) .* exp(1i*angle(A));
         B = B / max(max(abs(B)));
         C = fftshift(fft2(fftshift(B)));
-        intensity_retrival = abs(C);
+        amplitute_retrival = abs(C);
         aver_intensity_retrival = 0;
     
         for i = 1:column % calculate retrival intensity, next we can weighted
             for j = 1:row
-                aver_intensity_retrival = intensity_retrival(600+column_spacing*i,960-row_spacing*j) + aver_intensity_retrival;
+                aver_intensity_retrival = amplitute_retrival(600+column_spacing*i,960-row_spacing*j) + aver_intensity_retrival;
             end
         end
         aver_intensity_retrival = aver_intensity_retrival / row / column;
         
         for i = 1:column % weighted part
             for j = 1:row
-                weight(i,j) = weight(i,j) / (intensity_retrival(600+column_spacing*i,960-row_spacing*j)/aver_intensity_retrival);
+                weight(i,j) = weight(i,j) / (amplitute_retrival(600+column_spacing*i,960-row_spacing*j) / aver_intensity_retrival);
             end
         end
     
         D = abs(Target) .* exp(1i*angle(C));
+        
         for i = 1:column % weighted part
             for j = 1:row
                 D(600+column_spacing*i,960-row_spacing*j) = D(600+column_spacing*i,960-row_spacing*j) * weight(i,j);
             end
         end
+        
         D = D/max(max(abs(D)));
-        A = fftshift(ifft2(fftshift(D)));
-        error = [error; sum(sum(abs(intensity_retrival/sum(sum(intensity_retrival)) - abs(Blank_pic))))];   
+        A = fftshift(ifft2(fftshift(D)));   
     end
     pause(0.1);
-%% Plot results
-% 	figure
-% 	subplot(2,1,1);
-% 	imshow(Target);
-% 	title('Original image')
-% 	subplot(2,1,2);
-% 	imagesc(abs(C))               % last pattern
-% 	title('reconstructed image');
-% 	figure
-% 	k = 1:1:k;
-% 	plot(k,(error'));
-% 	title('Error');
-% 	figure
-% 	imagesc(abs(C)) %last pattern
-% 	title('reconstructed image');
+
     SLM_phase = im2uint8((angle(A)+pi)/2/pi);
-	imwrite(SLM_phase,'phase.png');
-%     imwrite(Target,"Target.png")
-%     imwrite(abs(C),"Retrived.png")
+% 	imwrite(SLM_phase,'phase.png');
     pause(0.1);
 %% Display into second monitor
 
     Screen('Preference', 'SkipSyncTests', 2);
     window = Screen('OpenWindow',2);
-%     image = imread("C:\Users\doyle\Documents\SLM-Tweezer\3by3_tweezer\phase.png");
-%     Screen('PutImage',window,image);
     Screen('PutImage',window,SLM_phase);
     Screen('Flip',window); 
 
@@ -151,7 +110,7 @@ for adaptive = 1:adaptive_num
     src.ExposureTime = Camera_Exposure;
     src.Gain = Camera_Gain;
     snapshot = getsnapshot(vidobj);
-    pause(0.3);
+    pause(0.1);
     snapshot = getsnapshot(vidobj);
     pause(0.1);
     
@@ -169,56 +128,43 @@ for adaptive = 1:adaptive_num
        max_y = max(boundary(:,1));
 
        current_tweezer = snapshot(min_y:max_y,min_x:max_x);
+%        tweezer_information(k) = sum(sum(current_tweezer));
        max_value = max(max(current_tweezer));
-    %    [max_value_y,max_value_x] = find(max_value == current_tweezer);
-    %    max_value_y = max_value_y(1) + min_y - 1;
-    %    max_value_x = max_value_x(1) + min_x - 1;
-    %    tweezer_information{k} = {max_value_y; max_value_x; max_value};
        tweezer_information(k) = max_value;
     end
 
-    % the tweeze information is currently position y and x and value
+    % the tweeze information is currently intensity
     tweezer_number = row * column;
     if tweezer_number ~= length(tweezer_information)
-        tweezer_information(1) = [];
+        tweezer_information(1) = []; % get rid of 0-order
     end
+
+    stdeviation = [stdeviation; std(tweezer_information)/mean(tweezer_information)];
     tweezer_information = reshape(tweezer_information,column,row);
     tweezer_information = double(tweezer_information);
     tweezer_information = tweezer_information / mean(mean(tweezer_information));
     
-    record = [record; (max(max(tweezer_information))-min(min(tweezer_information)))/(max(max(tweezer_information))+min(min(tweezer_information)))];
+%     record = [record; (max(max(tweezer_information))-min(min(tweezer_information)))/(max(max(tweezer_information))+min(min(tweezer_information)))];
 %% Update the target figure
 
     for i = 1:column
         for j = 1:row
-            Blank_pic(600+column_spacing*i,960-row_spacing*j) = Blank_pic(600+column_spacing*i,960-row_spacing*j) / tweezer_information(i,j);
+            Blank_pic(600+column_spacing*i,960-row_spacing*j) = Blank_pic(600+column_spacing*i,960-row_spacing*j) / sqrt(tweezer_information(i,j));
         end
     end
-
-    weight = ones(column,row);
-
     % Prepare the target picture
-	Target=double(Blank_pic);
+	Target=double(Blank_pic).* exp(1i*angle(C));
 	A = fftshift(ifft2(fftshift(Target)));
 
-%% Another way to update -- not right!
-%     for i = 1:column
-%         for j = 1:row
-%           weight(column,row) = weight(column,row) / tweezer_information(i,j);
-%         end
-%     end
-%% Loop ends
+% Show figure
 adaptive_list = 1:1:adaptive;
-plot(adaptive_list, record);
+% plot(adaptive_list, record);
+plot(adaptive_list, stdeviation);
 end
 
 
 %% Shut down the camera
-    % we must stop this video object by ourself, otherwise problem
-    % will come
     stop(vidobj);
-
-    % delete the video object, so other thread can use this camera
     delete(vidobj);
 %% Show the last figure
 	toc;
