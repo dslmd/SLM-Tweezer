@@ -7,11 +7,13 @@ I use MATLAB for speed.
 
 # About the files
 
-## "Hologram.mlapp"
+## WGS
+
+### "WGS.mlapp"
 
 A GUI software which can generate hologram and convert it.
 
-## "Scripts"
+### "GS-WGS-codes"
 
 All elements of hologram GUI, consist of following four scripts
 
@@ -23,7 +25,13 @@ All elements of hologram GUI, consist of following four scripts
 
 "Pic_convert.m": If we use a different wavelength, we can use this script to convert the hologram with the sacrifice of pixel depth.
 
-## "Algorithm"
+### "Example"
+
+"3by3_tweezer", "5by5_tweezer", "10by10_tweezer"
+
+Three results of performance in our test experiment using WGS. We use 1920\*1200 Thorlabs Spatial Light modulator. However, it would be better to use 1200\*1200
+
+## "Algorithm Principle"
 
 The illustration of GS and WGS algorithm. The principle is like holographic. All information or pattern can be encode into a hologram. So our goal is to generate a hologram to recover the tweezer array pattern.
 
@@ -31,17 +39,37 @@ The idea of GS algorithm is to recover tweezers, start from enhancing the total 
 
 The idea of WGS algorithm is to not only enhance the total tweezers but also balance the different intensity of tweezers. Therefore, we can get a very good uniformity of these tweezers. In other words, we will have a more uniform potential between potential array.
 
-## "3by3_tweezer","5by5_tweezer","10by10_tweezer"
-
-Three results of performance in our test experiment. We use 1920*1200 Thorlabs Spatial Light modulator.
+The idea of Adaptive-WGS algorithm is just to add a feedback to WGS input.
 
 
+
+## "Adapitive-WGS"
+
+### "Camera Example.png"
+
+Because the adaptive-WGS method needs a camera to do feedback, this is the example what we should place the camera.
+
+### "Adapitive-WGS.m"
+
+After set up camera as "Camera Example.png", just run this script is okay. Basically we treat this SLM as the second monitor of our computer.
+
+### "Adaptive-WGS-codes"
+
+The seperated codes for "Adapitive-WGS.m"
 
 # How to use our program?
 
-very easy.
+very easy. 
+
+For /WGS/WGS.mlapp
 
 1. Set your parameters
 2. Click <u>Generate Botton</u> to get a hologram
 3. *If the wavelength you use is different from the wavelength of rated wavelength of SLM, please click <u>Convert Botton</u>
+
+For /Adapitive-WGS/Adapitive-WGS.m
+
+1. Set the camera in a right direction
+2. Set the SLM as second monitor and install the required MATLAB package
+3. Set the parameters in codes and run it.
 
