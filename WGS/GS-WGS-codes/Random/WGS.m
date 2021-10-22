@@ -5,7 +5,8 @@ row = 10;
 column = 10;
 row_spacing = 15;
 column_spacing = 10;
-iteration_num = 30;
+iteration_num = 100;
+Phase_fixed = 20;
 Resolution = [1920 1200];
 tweezer_number = row * column;
 
@@ -45,6 +46,11 @@ tweezer_number = row * column;
         B = abs(input_intensity) .* exp(1i*angle(A));
         B = B / max(max(abs(B)));
         C = fftshift(fft2(fftshift(B)));
+
+        if k < Phase_fixed
+            phase_fixed = exp(1i*angle(C));
+        end
+
         intensity_retrival = abs(C);
         aver_intensity_retrival = 0;
     
@@ -61,7 +67,7 @@ tweezer_number = row * column;
             end
         end
     
-        D = abs(Target) .* exp(1i*angle(C));
+        D = abs(Target) .* phase_fixed;
         for i = 1:column % weighted part
             for j = 1:row
                 D(600+column_spacing*i,960-row_spacing*j) = D(600+column_spacing*i,960-row_spacing*j) * weight(i,j);
@@ -72,18 +78,20 @@ tweezer_number = row * column;
 %         error = [error; sum(sum(abs(intensity_retrival/sum(sum(intensity_retrival)) - abs(Blank_pic))))];   
     end
     non_uniformity = [];
-% for sigma = 0.1:0.1:5
-% %% Intensity noise?
-% 	x = linspace(-10,10,Resolution(1));
-% 	y = linspace(-10,10,Resolution(2));
-% 	[X,Y] = meshgrid(x,y);
-% 	x0 = 5;     		% center
-% 	y0 = 0;     		% center
+    sigma_list = [];
+
+for sigma = 0.1:0.1:10
+%% Intensity noise?
+	x = linspace(-10,10,Resolution(1));
+	y = linspace(-10,10,Resolution(2));
+	[X,Y] = meshgrid(x,y);
+	x0 = 5;     		% center
+	y0 = 0;     		% center
 %  	sigma = 5; 			% effective beam waist
-%     sigma_x = sigma/1.92;
-%     sigma_y = sigma/1.2;
-% 	res = ((X-x0).^2./(2*sigma_x^2) + (Y-y0).^2./(2*sigma_y^2));
-% 	input_intensity = exp(-res);
+    sigma_x = sigma/1.92;
+    sigma_y = sigma/1.2;
+	res = ((X-x0).^2./(2*sigma_x^2) + (Y-y0).^2./(2*sigma_y^2));
+	input_intensity = exp(-res);
 
 %% final loop, add noise to see retrive
     % add phase noise in B
@@ -107,9 +115,10 @@ tweezer_number = row * column;
         end
     end
 
-    non_uniformity = [non_uniformity; std(reshape(intensity_distribution,100,1))/mean(mean(intensity_distribution))]
-
-% end
-% plot(non_uniformity);
+    non_uniformity = [non_uniformity; std(reshape(intensity_distribution,100,1))/mean(mean(intensity_distribution))];
+    sigma_list = [sigma_list; sigma];
+end
+plot(sigma_list,non_uniformity);
+set(gca, 'YScale', 'log');
 toc;
     
