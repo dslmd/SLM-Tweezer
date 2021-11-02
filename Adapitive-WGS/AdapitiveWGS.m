@@ -4,15 +4,15 @@ tic;
 
 row = 10;
 column = 10;
-row_spacing = 15;
-column_spacing = 10;
+row_spacing = 8;
+column_spacing = 5;
 
-phase_fixed_point = 30; % phase fixed wgs algorithm
-iteration_num = 30;
+phase_fixed_point = 25; % phase fixed wgs algorithm
+iteration_num = 50;
 
 Resolution = [1920 1200];
 adaptive_num = 3;
-Camera_Exposure = 300;%112.181;
+Camera_Exposure = 100;%112.181;
 Camera_Gain = 1;
 % sqrt(tweezer_information(column + 1 - i,j))
 % sqrt(tweezer_information(i,row + 1 - j))
@@ -63,12 +63,15 @@ Camera_Gain = 1;
 
 %% LOOP starts
 stdeviation = [];
+track_one_intensity = [];
+snapshot_list = {};
+adaptive_weighted = ones(column,row);
 
 weight = ones(column,row);
 %% Adaptive Loops
 for adaptive = 1:adaptive_num
     % Start Weighted Gershberg-Saxton algorithm iteration
-    weight = weight ./ sqrt(tweezer_information);
+    weight = weight * adaptive_weighted;
     for k=1:iteration_num
         B = abs(input_intensity) .* exp(1i*angle(A));
         B = B / max(max(abs(B)));
@@ -130,6 +133,7 @@ for adaptive = 1:adaptive_num
     pause(0.1);
     stop(vidobj);
     delete(vidobj);
+    snapshot_list{adaptive} = snapshot;
     
     % Take photo for finding tweezer intensity
     vidobj = videoinput('gentl', 1, 'Mono10'); % create a video obj to get data
@@ -174,12 +178,14 @@ for adaptive = 1:adaptive_num
     disp(max(tweezer_information));
     tweezer_information = reshape(tweezer_information,column,row);
     tweezer_information = double(tweezer_information);
-    tweezer_information = tweezer_information / mean(mean(tweezer_information));
+    track_one_intensity = [track_one_intensity; tweezer_information(1,1)];
+    adaptive_weighted = adaptive_weighted ./ sqrt(sqrt(sqrt(tweezer_information / mean(mean(tweezer_information)))));
+    
     
     % Update the target figure
     for i = 1:column
         for j = 1:row
-            Blank_pic(600+column_spacing*i,960-row_spacing*j) = Blank_pic(600+column_spacing*i,960-row_spacing*j) / sqrt(tweezer_information(i,j));
+            Blank_pic(600+column_spacing*i,960-row_spacing*j) = 1 * adaptive_weighted(i,j);
         end
     end
 
